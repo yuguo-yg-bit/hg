@@ -1,24 +1,49 @@
 <!DOCTYPE html>
 <html>
+<head>
+    <meta charset="utf-8">
+    <title>上传文件到 D:/hg</title>
+</head>
 <body>
-    <h1>GitHub 前端 → 你电脑后端</h1>
+    <h2>上传文件到你的电脑 D:/hg/</h2>
     <input type="file" id="file">
-    <button onclick="upload()">上传到 D:/hg/</button>
+    <button onclick="upload()">上传文件</button>
 
     <script>
-        async function upload() {
-            let file = document.getElementById("file").files[0];
-            let formData = new FormData();
-            formData.append("file", file);
+        let serverIP = "";
 
-            // 这里是你电脑的公网地址
-            let res = await fetch("http://14.20.157.208:28888/upload", {
+        // 自动获取你最新公网IP
+        async function getIP() {
+            try {
+                let res = await fetch("http://192.168.1.108:8080/getip");
+                serverIP = await res.text();
+                console.log("当前服务器IP：" + serverIP);
+            } catch (e) {
+                console.log("获取IP失败");
+            }
+        }
+
+        // 上传文件
+        async function upload() {
+            if (!serverIP) {
+                alert("正在获取IP，请稍等...");
+                return;
+            }
+
+            let fileInput = document.getElementById("file");
+            let formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+
+            let response = await fetch("http://" + serverIP + ":28888/upload", {
                 method: "POST",
                 body: formData
             });
 
-            alert(await res.text());
+            alert(await response.text());
         }
+
+        // 页面打开自动获取IP
+        getIP();
     </script>
 </body>
 </html>
