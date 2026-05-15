@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <h1>GitHub 前端 → 你电脑后端</h1>
+    <input type="file" id="file">
+    <button onclick="upload()">上传到 D:/hg/</button>
+
+    <script>
+        async function upload() {
+            let file = document.getElementById("file").files[0];
+            let formData = new FormData();
+            formData.append("file", file);
+
+            // 这里是你电脑的公网地址
+            let res = await fetch("http://14.20.157.208:28888/upload", {
+                method: "POST",
+                body: formData
+            });
+
+            alert(await res.text());
+        }
+    </script>
+</body>
+</html>
