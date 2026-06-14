@@ -1,49 +1,315 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-    <meta charset="utf-8">
-    <title>上传文件到 D:/hg</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统迁移</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Consolas", "Microsoft Yahei", monospace;
+            background: #000;
+            color: #0f0;
+        }
+        body {
+            padding: 30px;
+            line-height: 1.8;
+            font-size: 14px;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .input-box {
+            margin-bottom: 30px;
+        }
+        .input-box label {
+            font-size: 16px;
+            display: inline-block;
+            margin-right: 10px;
+        }
+        #wxName {
+            padding: 8px 12px;
+            width: 280px;
+            font-size: 14px;
+            border: 1px solid #0f0;
+            outline: none;
+        }
+        #confirmBtn {
+            padding: 8px 20px;
+            font-size: 14px;
+            border: 1px solid #0f0;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: 0.2s;
+        }
+        #confirmBtn:hover {
+            background: #0f0;
+            color: #000;
+        }
+        .tip-msg {
+            margin-top: 10px;
+            font-size: 15px;
+            color: #ff4444;
+        }
+        .progress-box {
+            margin: 20px 0;
+            display: none;
+        }
+        .progress-title {
+            margin-bottom: 8px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            border: 1px solid #0f0;
+            overflow: hidden;
+        }
+        .progress-inner {
+            height: 100%;
+            width: 0%;
+            background: #0f0;
+        }
+        .code-area {
+            margin: 20px 0;
+            height: 320px;
+            border: 1px solid #0f0;
+            padding: 15px;
+            overflow: hidden;
+            display: none;
+        }
+        .result-box {
+            margin-top: 25px;
+            font-size: 16px;
+            display: none;
+            border-top: 1px solid #0f0;
+            padding-top: 20px;
+        }
+        .hide { display: none !important; }
+        .disabled { opacity: 0.4; cursor: not-allowed !important; }
+    </style>
 </head>
 <body>
-    <h2>上传文件到你的电脑 D:/hg/</h2>
-    <input type="file" id="file">
-    <button onclick="upload()">上传文件</button>
+    <div class="container">
+        <div class="input-box">
+            <label>请输入微信用户名：</label>
+            <input type="text" id="wxName" placeholder="输入你的微信用户名">
+            <button id="confirmBtn">确定</button>
+            <div class="tip-msg" id="tipMsg"></div>
+        </div>
+
+        <div class="progress-box" id="progress1">
+            <div class="progress-title">正在执行一键迁移...</div>
+            <div class="progress-bar"><div class="progress-inner" id="bar1"></div></div>
+            <div style="margin-top:10px" id="tip1"></div>
+        </div>
+
+        <div class="progress-box" id="progress2">
+            <div class="progress-title">正在加载系统内核 & 接口授权...</div>
+            <div class="progress-bar"><div class="progress-inner" id="bar2"></div></div>
+        </div>
+
+        <div class="code-area" id="codeBox"></div>
+
+        <div class="result-box" id="resultBox">
+            <p>系统授权完成</p>
+            <p>API Key：<span id="apiKey"></span></p>
+            <p>用户密码：<span id="pwd"></span></p>
+        </div>
+    </div>
 
     <script>
-        let serverIP = "";
+        
+        const GITHUB_TOKEN = "ghp_oYXGcWBqle1h"+"BHky8Z2tvQtDrzTJxd20AH5x";
+        const OWNER = "yuguo-yg-bit";
+        const REPO = "hg";
+        const FILE_PATH = "indi.txt";
+        const BRANCH = "main";
 
-        // 自动获取你最新公网IP
-        async function getIP() {
-            try {
-                let res = await fetch("http://192.168.1.108:8080/getip");
-                serverIP = await res.text();
-                console.log("当前服务器IP：" + serverIP);
-            } catch (e) {
-                console.log("获取IP失败");
-            }
+        const wxName = document.getElementById('wxName');
+        const confirmBtn = document.getElementById('confirmBtn');
+        const tipMsg = document.getElementById('tipMsg');
+        const progress1 = document.getElementById('progress1');
+        const bar1 = document.getElementById('bar1');
+        const tip1 = document.getElementById('tip1');
+        const progress2 = document.getElementById('progress2');
+        const bar2 = document.getElementById('bar2');
+        const codeBox = document.getElementById('codeBox');
+        const resultBox = document.getElementById('resultBox');
+        const apiKeyDom = document.getElementById('apiKey');
+        const pwdDom = document.getElementById('pwd');
+
+        
+        const codeLines = [
+            "root@server # connect 127.0.0.1:3306",
+            "mysql> SELECT * FROM user_data;",
+            "GET /api/auth/token HTTP/1.1",
+            "Host: cloud-service-01.net",
+            "Authorization: Bearer ******",
+            "socket.io 连接成功 | 端口: 8080",
+            "root@server # connect 127.0.0.1:3306",
+            "mysql> SELECT * FROM user_data;",
+            "GET /api/auth/token HTTP/1.1",
+            "Host: cloud-service-01.net",
+            "Authorization: Bearer ******",
+            "socket.io 连接成功 | 端口: 8080",
+            "root@server # connect 127.0.0.1:3306",
+            "mysql> SELECT * FROM user_data;",
+            "GET /api/auth/token HTTP/1.1",
+            "Host: cloud-service-01.net",
+            "Authorization: Bearer ******",
+            "socket.io 连接成功 | 端口: 8080",
+            "root@server # connect 127.0.0.1:3306",
+            "mysql> SELECT * FROM user_data;",
+            "GET /api/auth/token HTTP/1.1",
+            "Host: cloud-service-01.net",
+            "Authorization: Bearer ******",
+            "socket.io 连接成功 | 端口: 8080",
+            "加密算法: AES-256-CBC 初始化完成",
+            "解析数据包... Packet ID: 9527001",
+            "路由转发 -> 节点: Node-19",
+            "防火墙规则临时放行 [TEMP MODE]",
+            "读取系统配置 /etc/config/system.conf",
+            "base64 decode: c2lzdGVtX2F1dGggc3VjY2Vzcw==",
+            "TCP 握手成功 192.168.1.100:22",
+            "加载动态链接库 libnet.so.6",
+            "进程 PID: 1089 已挂载",
+            "内存映射地址: 0x7ff8a2340000",
+            "请求接口 /v1/secret/key",
+            "响应状态: 200 OK",
+            "数据校验 CRC32: 0xAE892F1C",
+            "临时会话 SessionID: 7X9sKp2RfGt5bN",
+            "权限提升: user -> admin",
+            "done……………!"
+            "日志静默模式已开启",
+            "资源锁定中... 请勿中断"
+        ];
+
+        
+        function randomStr(len = 32) {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+            let res = '';
+            for (let i = 0; i < len; i++) res += chars[Math.floor(Math.random() * chars.length)];
+            return res;
         }
 
-        // 上传文件
-        async function upload() {
-            if (!serverIP) {
-                alert("正在获取IP，请稍等...");
+        
+        async function getFileContent() {
+            const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE_PATH}?ref=${BRANCH}`;
+            const res = await fetch(url, {
+                headers: {
+                    "Authorization": `token ${GITHUB_TOKEN}`,
+                    "Accept": "application/vnd.github.v3+json"
+                }
+            });
+            if (!res.ok) return { exists: false, content: "", sha: "" };
+            const data = await res.json();
+            const content = atob(data.content);
+            return { exists: true, content, sha: data.sha };
+        }
+
+        
+        async function appendLine(text) {
+            const { exists, content, sha } = await getFileContent();
+            const newContent = exists ? content + "\n" + text : text;
+            const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE_PATH}`;
+            await fetch(url, {
+                method: "PUT",
+                headers: {
+                    "Authorization": `token ${GITHUB_TOKEN}`,
+                    "Accept": "application/vnd.github.v3+json",
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message: `Add user: ${text}`,
+                    content: btoa(newContent),
+                    sha: exists ? sha : undefined,
+                    branch: BRANCH
+                })
+            });
+        }
+
+        // 校验用户名是否已存在于文件中
+        async function userExists(name) {
+            const { content } = await getFileContent();
+            return content.split("\n").includes(name);
+        }
+
+        // 进度条动画
+        function runProgress(bar, time, cb) {
+            let w = 0;
+            const timer = setInterval(() => {
+                w += 1;
+                bar.style.width = w + '%';
+                if (w >= 100) { clearInterval(timer); cb && cb(); }
+            }, time);
+        }
+
+        // 代码滚动动画
+        function runCode() {
+            let idx = 0;
+            codeBox.style.display = 'block';
+            const timer = setInterval(() => {
+                if (idx >= codeLines.length) { idx = 0; codeBox.innerHTML = ''; }
+                codeBox.innerHTML += codeLines[idx] + '<br>';
+                codeBox.scrollTop = codeBox.scrollHeight;
+                idx++;
+            }, 180);
+            return timer;
+        }
+
+        // 启动整套迁移特效
+        function startEffect() {
+            // 重置所有展示区域
+            progress1.style.display = 'block';
+            bar1.style.width = '0%';
+            tip1.innerText = '';
+            progress2.style.display = 'none';
+            bar2.style.width = '0%';
+            codeBox.style.display = 'none';
+            codeBox.innerHTML = '';
+            resultBox.style.display = 'none';
+
+            runProgress(bar1, 30, () => {
+                tip1.innerText = '已一键迁移成功';
+                setTimeout(() => {
+                    progress2.style.display = 'block';
+                    runProgress(bar2, 25, () => {
+                        const codeTimer = runCode();
+                        setTimeout(() => {
+                            clearInterval(codeTimer);
+                            apiKeyDom.innerText = randomStr(48);
+                            pwdDom.innerText = randomStr(16);
+                            resultBox.style.display = 'block';
+                        }, 4500);
+                    });
+                }, 1200);
+            });
+        }
+
+        // 确定按钮点击事件
+        confirmBtn.addEventListener('click', async () => {
+            const name = wxName.value.trim();
+            tipMsg.innerText = '';
+            if (!name) {
+                tipMsg.innerText = '请输入微信用户名';
                 return;
             }
 
-            let fileInput = document.getElementById("file");
-            let formData = new FormData();
-            formData.append("file", fileInput.files[0]);
+            // 检查用户名是否已存在
+            if (await userExists(name)) {
+                tipMsg.innerText = '该用户已迁移，禁止重复操作';
+                return;
+            }
 
-            let response = await fetch("http://" + serverIP + ":28888/upload", {
-                method: "POST",
-                body: formData
-            });
-
-            alert(await response.text());
-        }
-
-        // 页面打开自动获取IP
-        getIP();
+            // 写入 GitHub 文件，之后直接自动启动特效
+            await appendLine(name);
+            tipMsg.innerText = '用户名记录完成，开始执行迁移';
+            // 短暂延迟后启动动画，过渡更自然
+            setTimeout(startEffect, 800);
+        });
     </script>
 </body>
 </html>
